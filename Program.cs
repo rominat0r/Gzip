@@ -117,8 +117,7 @@ namespace microsoft.botsay
             {
                 FileStream fs = new FileStream(SourceFile, FileMode.Open, FileAccess.Read);
                 double ram = new ComputerInfo().AvailablePhysicalMemory;
-                //nNoofFiles = (int)Math.Ceiling(Convert.ToDouble(fs.Length) / ram);
-                nNoofFiles = 4;
+                nNoofFiles = (int)Math.Ceiling(Convert.ToDouble(fs.Length) / ram);
                 if (nNoofFiles > 1)
                 {
                     Console.WriteLine("Due to the lack of RAM file will be split into:{0}", nNoofFiles);
