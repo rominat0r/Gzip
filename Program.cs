@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -45,22 +45,16 @@ namespace microsoft.botsay
                     sDir = argv[1];
                     sCompressedFile = argv[2];
                     SplitFile(directoryPath + @"\" + sDir, Convert.ToInt32(2), sCompressedFile);
+                    MergeFile(sCompressedFile);
+                    Directory.Delete(directoryPath + @"\" + sCompressedFile);
                     Console.WriteLine("Wait for compression to finish ... ");
                 }
                 else if (sCommand == "decompress")
                 {
                     sCompressedFile = argv[1];
-                    sDir = argv[2];
-                    DirectoryInfo di = Directory.CreateDirectory(directoryPath + @"\" + sDir);
-                    DirectoryInfo directorySelected = new DirectoryInfo(directoryPath + @"\" + sCompressedFile);
-
-                    foreach (FileInfo fileToDecompress in directorySelected.GetFiles("*.gz"))
-                    {
-                        Decompress(fileToDecompress);
-                        string currentFileName = fileToDecompress.Name;
-                        string newFileName = currentFileName.Remove(currentFileName.Length - fileToDecompress.Extension.Length);
-                        File.Move(directoryPath + @"\" + sCompressedFile + @"\" + newFileName, directoryPath + @"\" + sDir + @"\" + newFileName);
-                    }
+                    sDir = argv[2];     
+                    FileInfo directorySelected = new FileInfo(directoryPath + @"\" + sCompressedFile);
+                    Decompress(directorySelected, sDir);  
                 }
                 else
                 {
@@ -76,19 +70,68 @@ namespace microsoft.botsay
                 return 1;
             }
         }
-        public static void Decompress(FileInfo fileToDecompress)
+        public static bool MergeFile(string inputfoldername1)
+        {
+            bool Output = false;
+            try
+            {
+                DirectoryInfo tmpfiles = new DirectoryInfo(directoryPath + @"\" + inputfoldername1);
+                FileStream outPutFile = null;
+                string PrevFileName = "";
+                foreach (FileInfo tempFile in tmpfiles.GetFiles("*.gz"))
+                {
+                    string fileName = tempFile.FullName;
+                    string file_extension = Path.GetExtension(Path.GetFileNameWithoutExtension(tempFile.Name));
+                    string baseFileName = inputfoldername1 + file_extension ;
+                    string extension = tempFile.Extension;
+                    if (!PrevFileName.Equals(baseFileName))
+                    {
+                        if (outPutFile != null)
+                        {
+                            outPutFile.Flush();
+                            outPutFile.Close();
+                        }
+                        
+                        outPutFile = new FileStream(directoryPath + @"\" + inputfoldername1 + file_extension+ extension, FileMode.OpenOrCreate, FileAccess.Write);
+
+                    }
+
+                    int bytesRead = 0;
+                    byte[] buffer = new byte[1024];
+                    FileStream inputTempFile = new FileStream(tempFile.FullName, FileMode.OpenOrCreate, FileAccess.Read);
+
+                    while ((bytesRead = inputTempFile.Read(buffer, 0, 1024)) > 0)
+                        outPutFile.Write(buffer, 0, bytesRead);
+
+                    inputTempFile.Close();
+                    File.Delete(tempFile.FullName);
+                    PrevFileName = baseFileName;
+
+                }
+
+                outPutFile.Close();
+            }
+            catch
+            {
+                throw new ArgumentException();
+            }
+
+            return Output;
+
+        }
+        public static void Decompress(FileInfo fileToDecompress, string newname)
         {
             using (FileStream originalFileStream = fileToDecompress.OpenRead())
             {
                 string currentFileName = fileToDecompress.FullName;
-                string newFileName = currentFileName.Remove(currentFileName.Length - fileToDecompress.Extension.Length);
+                string file_extension = Path.GetExtension(Path.GetFileNameWithoutExtension(fileToDecompress.Name));
+                string newFileName = newname;
 
-                using (FileStream decompressedFileStream = File.Create(newFileName))
+                using (FileStream decompressedFileStream = File.Create(newFileName + file_extension))
                 {
                     using (GZipStream decompressionStream = new GZipStream(originalFileStream, CompressionMode.Decompress))
                     {
                         decompressionStream.CopyTo(decompressedFileStream);
-
                         Console.WriteLine($"Decompressed: {fileToDecompress.Name}");
                     }
                 }
@@ -124,8 +167,7 @@ namespace microsoft.botsay
                     SizeofEachFile = (int)Math.Ceiling(fs.Length / nNoofFiles);
                 }
                 else
-                {
-                    
+                { 
                     SizeofEachFile = (int)fs.Length;
                 }
 
