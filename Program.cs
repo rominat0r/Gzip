@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 
 namespace microsoft.botsay
 {
-    class Program
+   public class Program
     {
+        List<Thread> threads; 
         public static string directoryPath = @".";
-        public static int Main(string[] argv)
+        public static int MainProgram(string[] argv)
         {
             if (argv.Length == 0)
             {
@@ -44,8 +45,13 @@ namespace microsoft.botsay
                 {
                     sDir = argv[1];
                     sCompressedFile = argv[2];
-                    SplitFile(directoryPath + @"\" + sDir, Convert.ToInt32(2), sCompressedFile);
-                    MergeFile(sCompressedFile);
+
+                   
+                    double countOfFiles = SplitFile(directoryPath + @"\" + sDir, sCompressedFile);
+                    if (countOfFiles > 1)
+                    {
+                        MergeFile(sCompressedFile);
+                    }
                     Directory.Delete(directoryPath + @"\" + sCompressedFile);
                     Console.WriteLine("Wait for compression to finish ... ");
                 }
@@ -152,8 +158,9 @@ namespace microsoft.botsay
         }
 
 
-        public static void SplitFile(string SourceFile, double nNoofFiles, string outfilename)
+        public static double SplitFile(string SourceFile,  string outfilename)
         {
+            double nNoofFiles;
             int SizeofEachFile;
             DirectoryInfo di = Directory.CreateDirectory(directoryPath + @"\" + outfilename);
             try
@@ -169,9 +176,10 @@ namespace microsoft.botsay
                 else
                 { 
                     SizeofEachFile = (int)fs.Length;
+                    
                 }
 
-                for (int i = 0; i < nNoofFiles; i++)
+                for (int i = 1; i <= nNoofFiles; i++)
                 {
                     int bytesRead = 0;
                     byte[] buffer = new byte[SizeofEachFile];
@@ -181,6 +189,7 @@ namespace microsoft.botsay
                         Console.WriteLine(i + SourceFile.Substring(2) + " is being compressed ... ");
                         Thread t = new Thread(() => Compress(outfilename, SourceFile, bytestream, i));
                         t.Start();
+
                     }
                 }
                 fs.Close();
@@ -189,6 +198,8 @@ namespace microsoft.botsay
             {
                 throw new ArgumentException(Ex.Message);
             }
+            return nNoofFiles;
+            
         }
     }
 }
